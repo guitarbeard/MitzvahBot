@@ -17,18 +17,19 @@ from nap.url import Url # For Hebcal & Geonames API requests
 ###############
 
 # USER CONFIGURABLE VARIABLES. SET BEFORE RUNNING.
-cfg_zipcode = 'ENTER ZIPCODE' # Your United States zipcode. No support for international locations.
+cfg_zipcode = '90808' # Your United States zipcode. No support for international locations.
 cfg_twitter = twitter.Api(consumer_key='GET FROM APP.TWITTER.COM',
                       consumer_secret='GET FROM APP.TWITTER.COM',
                       access_token_key='GET FROM APP.TWITTER.COM',
                       access_token_secret='GET FROM APP.TWITTER.COM') # Register your own Twitter app at https://apps.twitter.com/. Twitter will provide these API keys.
-cfg_arduino_port = 'ENTER PORT NAME' # Your arduino serial port name. Example: /dev/ttyACM0.
+cfg_arduino_port = '/dev/tty.usbmodem1421' # Your arduino serial port name. Example: /dev/ttyACM0.
 cfg_extinguish_after = 4 # Extinguish candles this many hours after they were lit.
 
 # Debugging variables. Modify as needed.
-cfg_debug = False # If True, candle lighting will start 30 seconds from execution now and increment every few seconds seconds.
+cfg_debug = True # If True, candle lighting will start 30 seconds from execution now and increment every few seconds seconds.
 cfg_debug_noarduino = False # If True, we'll skip communicating with the Arduino. Useful for debugging non-Arduino components on this script.
-cfg_debug_notalking = False # If True, tweets will be displayed on console instead of Twitter.
+cfg_debug_notalking = True # If True, tweets will be displayed on console instead of Twitter.
+cfg_debug_demo = True # If True, will loop forever for demo purposes.
 
 # Internal variables. Do not modify.
 dev_arduino = None
@@ -217,7 +218,7 @@ def main():
 			print(list(serial.tools.list_ports.comports()))
 			print ('Update your cfg_arduino_port setting.')
 			exit()
-		
+
 		print ("Connected to Arduino on port " + cfg_arduino_port + "\n")
 
 		time.sleep(2) # Arduino hangs after opening serial port. Wait for port to settle.
@@ -225,7 +226,7 @@ def main():
 	# Get lighting times
 	if cfg_debug is True:
 		for index in range(0,8):
-			var_lighting_times.append(datetime.now() + timedelta(seconds=(16*index)))
+			var_lighting_times.append(datetime.now() + timedelta(seconds=(30*index)))
 	else:
 		try:
 			var_lighting_times = getLightingTimes(cfg_zipcode)
@@ -268,7 +269,7 @@ def main():
 			# If we've reached turn off time
 			if (
 				((cfg_debug is False) and datetime.now() >= (var_lighting_times[var_current_night-1]+timedelta(hours=cfg_extinguish_after)))
-				or ((cfg_debug is True) and datetime.now() >= (var_lighting_times[var_current_night-1]+timedelta(seconds=5)))
+				or ((cfg_debug is True) and datetime.now() >= (var_lighting_times[var_current_night-1]+timedelta(seconds=30)))
 				):
 				try:
 					extinguishCandles()
@@ -281,7 +282,15 @@ def main():
 
 		# Exit if Chanukah is over
 		if var_current_night is 9:
+			extinguishCandles()
 			print "Chanukah is over. Exiting."
-			exit()
+			if (cfg_debug_demo):
+				var_lighting_times = []
+				var_current_night = 1
+				var_last_night_lit = 0
+				var_candles_lit = False
+				main()
+			else:
+				exit()
 
 main()
